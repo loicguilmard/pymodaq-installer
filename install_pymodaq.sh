@@ -1,48 +1,78 @@
 #!/usr/bin/env bash
 # =====================================================================
 #  Installation de PyMoDAQ (Linux)
-#  - crée un environnement virtuel
-#  - installe les requirements (ou pymodaq si pas de requirements.txt)
+#  - crée un environnement virtuel (venv avec Python >= 3.10,
+#    ou à défaut un environnement conda si conda est installé)
+#  - installe pymodaq
 #  - installe PySide6
 #  - crée une icône "PyMoDAQ" (menu des applications + Bureau)
 #
 #  Usage :  bash install_pymodaq.sh [dossier_d_installation]
-#  Variable optionnelle : PYMODAQ_CMD=dashboard  (par défaut : pymodaq = Launcher)
+#  Variables optionnelles :
+#    PYMODAQ_CMD=dashboard        (par défaut : pymodaq = Launcher)
+#    PYMODAQ_CONDA=1              (forcer conda)
+#    PYMODAQ_CONDA_PYTHON=3.12    (version de Python de l'environnement conda)
 # =====================================================================
 set -euo pipefail
 
 INSTALL_DIR="${1:-$HOME/PyMoDAQ}"
 CMD="${PYMODAQ_CMD:-pymodaq}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+USE_CONDA="${PYMODAQ_CONDA:-0}"          # 1 = forcer conda même si Python est présent
+CONDA_PYTHON="${PYMODAQ_CONDA_PYTHON:-3.12}"
 VENV="$INSTALL_DIR/venv"
 VPY="$VENV/bin/python"
 
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 
-# --- 1. Python >= 3.10 ----------------------------------------------
-step "Recherche de Python"
-PY="$(command -v python3 || true)"
-[ -n "$PY" ] || { echo "python3 introuvable (sudo apt install python3 python3-venv)"; exit 1; }
-"$PY" -c 'import sys; sys.exit(sys.version_info < (3, 10))' \
-  || { echo "PyMoDAQ nécessite Python >= 3.10 ($("$PY" --version) détecté)"; exit 1; }
-"$PY" -c 'import venv, ensurepip' 2>/dev/null \
-  || { echo "Module venv manquant : sudo apt install python3-venv"; exit 1; }
-echo "$("$PY" --version) trouvé."
+# Python >= 3.10 avec venv disponible ?
+find_python() {
+  local p
+  p="$(command -v python3 || true)"
+  [ -n "$p" ] && "$p" -c 'import sys, venv, ensurepip; sys.exit(sys.version_info < (3, 10))' 2>/dev/null \
+    && echo "$p"
+}
 
-# --- 2. Environnement virtuel ---------------------------------------
-step "Création de l'environnement virtuel dans $VENV"
+# conda installé ?
+find_conda() {
+  if [ -n "${CONDA_EXE:-}" ] && [ -x "$CONDA_EXE" ]; then echo "$CONDA_EXE"; return; fi
+  if command -v conda >/dev/null 2>&1; then command -v conda; return; fi
+  local d
+  for d in miniforge3 miniconda3 anaconda3 mambaforge; do
+    for base in "$HOME" /opt; do
+      [ -x "$base/$d/bin/conda" ] && { echo "$base/$d/bin/conda"; return; }
+    done
+  done
+}
+
+# --- 1. Environnement : venv ou, à défaut, conda ----------------------
+step "Recherche de Python / conda"
 mkdir -p "$INSTALL_DIR"
-[ -x "$VPY" ] || "$PY" -m venv "$VENV"
+
+if [ -x "$VPY" ]; then
+  echo "Environnement déjà présent dans $VENV, réutilisé."
+else
+  PY=""
+  [ "$USE_CONDA" = 1 ] || PY="$(find_python || true)"
+  if [ -n "$PY" ]; then
+    step "$("$PY" --version) trouvé : création de l'environnement virtuel dans $VENV"
+    "$PY" -m venv "$VENV"
+  else
+    CONDA="$(find_conda || true)"
+    if [ -z "$CONDA" ]; then
+      echo "Ni Python >= 3.10 (avec venv) ni conda n'ont été trouvés."
+      echo "Installez python3 et python3-venv (ex. sudo apt install python3 python3-venv) ou Miniforge."
+      exit 1
+    fi
+    step "Conda trouvé ($CONDA) : création de l'environnement conda (Python $CONDA_PYTHON) dans $VENV"
+    "$CONDA" create -y -p "$VENV" "python=$CONDA_PYTHON" pip -c conda-forge --override-channels
+  fi
+fi
+
 "$VPY" -m pip install --upgrade pip wheel setuptools
 
-# --- 3. Requirements + PySide6 --------------------------------------
-if [ -f "$SCRIPT_DIR/requirements.txt" ]; then
-  step "Installation des requirements ($SCRIPT_DIR/requirements.txt)"
-  "$VPY" -m pip install -r "$SCRIPT_DIR/requirements.txt"
-else
-  step "Pas de requirements.txt : installation de pymodaq"
-  "$VPY" -m pip install pymodaq
-fi
+# --- 2. PyMoDAQ + PySide6 -------------------------------------------
+step "Installation de pymodaq"
+"$VPY" -m pip install pymodaq
 
 step "Installation de PySide6"
 "$VPY" -m pip install pyside6
@@ -57,19 +87,13 @@ if [ ! -d /etc/.pymodaq ]; then
     || echo "Impossible de créer /etc/.pymodaq, à faire manuellement."
 fi
 
-# --- 4. Icône --------------------------------------------------------
-step "Recherche d'une icône PyMoDAQ"
-ICON="$("$VPY" - <<'EOF'
-import sysconfig, pathlib
-site = pathlib.Path(sysconfig.get_paths()["purelib"])
-hits = [p for d in site.glob("pymodaq*") if d.is_dir()
-          for ext in ("png", "svg", "ico")
-          for p in d.rglob(f"*.{ext}") if "pymodaq" in p.name.lower()]
-print(hits[0] if hits else "")
-EOF
-)"
-[ -n "$ICON" ] || ICON="applications-science"
-echo "Icône : $ICON"
+# --- 4. Icône fournie par le paquet pymodaq ---------------------------
+SITE="$("$VPY" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+ICON="$SITE/pymodaq/icon.ico"
+if [ ! -f "$ICON" ]; then
+  echo "Icône introuvable ($ICON), icône par défaut utilisée."
+  ICON="applications-science"
+fi
 
 # --- 5. Lanceur .desktop ---------------------------------------------
 step "Création de l'icône de lancement"
