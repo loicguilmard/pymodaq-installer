@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =====================================================================
 #  Installation de PyMoDAQ (Linux)
-#  - crée un environnement virtuel (venv avec Python >= 3.10,
-#    ou à défaut un environnement conda si conda est installé)
+#  - crée un environnement : conda si conda est installé,
+#    sinon un venv avec Python >= 3.10
 #  - installe pymodaq
 #  - installe PySide6
 #  - crée une icône "PyMoDAQ" (menu des applications + Bureau)
@@ -10,14 +10,14 @@
 #  Usage :  bash install_pymodaq.sh [dossier_d_installation]
 #  Variables optionnelles :
 #    PYMODAQ_CMD=dashboard        (par défaut : pymodaq = Launcher)
-#    PYMODAQ_CONDA=1              (forcer conda)
+#    PYMODAQ_NO_CONDA=1           (ignorer conda, utiliser un venv)
 #    PYMODAQ_CONDA_PYTHON=3.12    (version de Python de l'environnement conda)
 # =====================================================================
 set -euo pipefail
 
 INSTALL_DIR="${1:-$HOME/PyMoDAQ}"
 CMD="${PYMODAQ_CMD:-pymodaq}"
-USE_CONDA="${PYMODAQ_CONDA:-0}"          # 1 = forcer conda même si Python est présent
+NO_CONDA="${PYMODAQ_NO_CONDA:-0}"        # 1 = ignorer conda et utiliser un venv
 CONDA_PYTHON="${PYMODAQ_CONDA_PYTHON:-3.12}"
 VENV="$INSTALL_DIR/venv"
 VPY="$VENV/bin/python"
@@ -44,27 +44,27 @@ find_conda() {
   done
 }
 
-# --- 1. Environnement : venv ou, à défaut, conda ----------------------
-step "Recherche de Python / conda"
+# --- 1. Environnement : conda, sinon venv -----------------------------
+step "Recherche de conda / Python"
 mkdir -p "$INSTALL_DIR"
 
 if [ -x "$VPY" ]; then
   echo "Environnement déjà présent dans $VENV, réutilisé."
 else
-  PY=""
-  [ "$USE_CONDA" = 1 ] || PY="$(find_python || true)"
-  if [ -n "$PY" ]; then
-    step "$("$PY" --version) trouvé : création de l'environnement virtuel dans $VENV"
-    "$PY" -m venv "$VENV"
-  else
-    CONDA="$(find_conda || true)"
-    if [ -z "$CONDA" ]; then
-      echo "Ni Python >= 3.10 (avec venv) ni conda n'ont été trouvés."
-      echo "Installez python3 et python3-venv (ex. sudo apt install python3 python3-venv) ou Miniforge."
-      exit 1
-    fi
+  CONDA=""
+  [ "$NO_CONDA" = 1 ] || CONDA="$(find_conda || true)"
+  if [ -n "$CONDA" ]; then
     step "Conda trouvé ($CONDA) : création de l'environnement conda (Python $CONDA_PYTHON) dans $VENV"
     "$CONDA" create -y -p "$VENV" "python=$CONDA_PYTHON" pip -c conda-forge --override-channels
+  else
+    PY="$(find_python || true)"
+    if [ -z "$PY" ]; then
+      echo "Ni conda ni Python >= 3.10 (avec venv) n'ont été trouvés."
+      echo "Installez Miniforge, ou python3 et python3-venv (ex. sudo apt install python3 python3-venv)."
+      exit 1
+    fi
+    step "Conda absent, $("$PY" --version) trouvé : création de l'environnement virtuel dans $VENV"
+    "$PY" -m venv "$VENV"
   fi
 fi
 

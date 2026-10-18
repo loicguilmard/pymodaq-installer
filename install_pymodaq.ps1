@@ -1,19 +1,19 @@
 # =====================================================================
 #  Installation de PyMoDAQ (Windows)
-#  - crée un environnement virtuel (venv avec Python >= 3.10,
-#    ou à défaut un environnement conda si conda est installé)
+#  - crée un environnement : conda si conda est installé,
+#    sinon un venv avec Python >= 3.10
 #  - installe pymodaq
 #  - installe PySide6
 #  - crée un raccourci "PyMoDAQ" sur le Bureau et dans le menu Démarrer
 #
 #  Usage :  double-cliquer sur install_pymodaq.bat
-#      ou   powershell -ExecutionPolicy Bypass -File install_pymodaq.ps1 [-InstallDir C:\chemin] [-Conda]
-#           -Conda : force l'utilisation de conda même si Python est présent
+#      ou   powershell -ExecutionPolicy Bypass -File install_pymodaq.ps1 [-InstallDir C:\chemin] [-NoConda]
+#           -NoConda : ignore conda et utilise un venv avec Python
 # =====================================================================
 param(
     [string]$InstallDir    = (Join-Path $env:USERPROFILE "PyMoDAQ"),
     [string]$Command       = "pymodaq",   # "pymodaq" = Launcher (>= 5.2), ou "dashboard"
-    [switch]$Conda,                       # force conda
+    [switch]$NoConda,                     # ignore conda, utilise un venv
     [string]$CondaPython   = "3.12"       # version de Python pour l'environnement conda
 )
 
@@ -57,10 +57,9 @@ function Find-Conda {
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
-# --- 1. Choix de l'environnement : venv ou conda ----------------------
-Step "Recherche de Python / conda"
-$PyCmd    = if ($Conda) { $null } else { Find-Python }
-$CondaExe = $null
+# --- 1. Choix de l'environnement : conda, sinon venv ------------------
+Step "Recherche de conda / Python"
+$CondaExe = if ($NoConda) { $null } else { Find-Conda }
 
 if (Test-Path $EnvPy) {
     Write-Host "Environnement conda déjà présent dans $Venv, réutilisé."
@@ -70,23 +69,23 @@ elseif (Test-Path $VenvPy) {
     Write-Host "Environnement virtuel déjà présent dans $Venv, réutilisé."
     $Py = $VenvPy
 }
-elseif ($PyCmd) {
-    $a = @($PyCmd | Select-Object -Skip 1)
-    $ver = & $PyCmd[0] @a -c "import sys; print('%d.%d' % sys.version_info[:2])"
-    Step "Python $ver trouvé : création de l'environnement virtuel dans $Venv"
-    & $PyCmd[0] @a -m venv $Venv
-    if ($LASTEXITCODE -ne 0) { throw "Échec de la création de l'environnement virtuel." }
-    $Py = $VenvPy
-}
-else {
-    $CondaExe = Find-Conda
-    if (-not $CondaExe) {
-        throw "Ni Python >= 3.10 ni conda n'ont été trouvés. Installez Python (https://www.python.org, cocher 'Add to PATH') ou Miniforge/Miniconda."
-    }
+elseif ($CondaExe) {
     Step "Conda trouvé ($CondaExe) : création de l'environnement conda (Python $CondaPython) dans $Venv"
     & $CondaExe create -y -p $Venv "python=$CondaPython" pip -c conda-forge --override-channels
     if ($LASTEXITCODE -ne 0) { throw "Échec de la création de l'environnement conda." }
     $Py = $EnvPy
+}
+else {
+    $PyCmd = Find-Python
+    if (-not $PyCmd) {
+        throw "Ni conda ni Python >= 3.10 n'ont été trouvés. Installez Miniforge/Miniconda ou Python (https://www.python.org, cocher 'Add to PATH')."
+    }
+    $a = @($PyCmd | Select-Object -Skip 1)
+    $ver = & $PyCmd[0] @a -c "import sys; print('%d.%d' % sys.version_info[:2])"
+    Step "Conda absent, Python $ver trouvé : création de l'environnement virtuel dans $Venv"
+    & $PyCmd[0] @a -m venv $Venv
+    if ($LASTEXITCODE -ne 0) { throw "Échec de la création de l'environnement virtuel." }
+    $Py = $VenvPy
 }
 
 & $Py -m pip install --upgrade pip wheel setuptools
