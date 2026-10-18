@@ -1,8 +1,6 @@
 # Installateur PyMoDAQ
 
-Scripts d'installation automatique de [PyMoDAQ](https://pymodaq.cnrs.fr/) pour Windows et Linux.
-
-En une commande, ils :
+Scripts d'installation automatique de [PyMoDAQ](https://pymodaq.cnrs.fr/) pour Windows et Linux qui :
 
 1. créent un environnement Python isolé (**conda** s'il est installé, sinon **venv**) ;
 2. installent `pymodaq` et le backend Qt `pyside6` ;
@@ -39,7 +37,7 @@ Ou depuis une console :
 install_pymodaq.bat [options]
 ```
 
-### Linux
+### Linux (Not tested)
 
 ```bash
 bash install_pymodaq.sh [dossier_d_installation]
