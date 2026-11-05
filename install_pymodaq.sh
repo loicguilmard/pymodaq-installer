@@ -3,22 +3,21 @@
 #  Installation de PyMoDAQ (Linux)
 #  - crée un environnement : conda si conda est installé,
 #    sinon un venv avec Python >= 3.10
-#  - installe pymodaq
-#  - installe PySide6
+#  - installe ou met à jour pymodaq et PySide6 (pymodaq[pyside6])
 #  - crée une icône "PyMoDAQ" (menu des applications + Bureau)
 #
 #  Usage :  bash install_pymodaq.sh [dossier_d_installation]
 #  Variables optionnelles :
 #    PYMODAQ_CMD=dashboard        (par défaut : pymodaq = Launcher)
 #    PYMODAQ_NO_CONDA=1           (ignorer conda, utiliser un venv)
-#    PYMODAQ_CONDA_PYTHON=3.12    (version de Python de l'environnement conda)
+#    PYMODAQ_CONDA_PYTHON=3.14    (version de Python de l'environnement conda)
 # =====================================================================
 set -euo pipefail
 
 INSTALL_DIR="${1:-$HOME/PyMoDAQ}"
 CMD="${PYMODAQ_CMD:-pymodaq}"
 NO_CONDA="${PYMODAQ_NO_CONDA:-0}"        # 1 = ignorer conda et utiliser un venv
-CONDA_PYTHON="${PYMODAQ_CONDA_PYTHON:-3.12}"
+CONDA_PYTHON="${PYMODAQ_CONDA_PYTHON:-3.14}"
 VENV="$INSTALL_DIR/venv"
 VPY="$VENV/bin/python"
 
@@ -71,11 +70,11 @@ fi
 "$VPY" -m pip install --upgrade pip wheel setuptools
 
 # --- 2. PyMoDAQ + PySide6 -------------------------------------------
-step "Installation de pymodaq"
-"$VPY" -m pip install pymodaq
-
-step "Installation de PySide6"
-"$VPY" -m pip install pyside6
+# --upgrade : sur un environnement réutilisé, met pymodaq à jour au lieu de garder l'ancienne version.
+# Extra [pyside6] : installe PySide6 avec les exclusions de version définies par PyMoDAQ.
+step "Installation de pymodaq et PySide6"
+"$VPY" -m pip install --upgrade "pymodaq[pyside6]"
+echo "pymodaq $("$VPY" -c "import importlib.metadata as m; print(m.version('pymodaq'))") installé."
 
 EXE="$VENV/bin/$CMD"
 [ -x "$EXE" ] || { echo "Commande '$CMD' introuvable dans l'environnement ($EXE)"; exit 1; }
