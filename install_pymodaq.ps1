@@ -14,11 +14,11 @@ param(
     [string]$InstallDir    = (Join-Path $env:USERPROFILE "PyMoDAQ"),
     [string]$Command       = "pymodaq",   # "pymodaq" = Launcher (>= 5.2), ou "dashboard"
     [switch]$NoConda,                     # ignore conda, utilise un venv
-    [string]$CondaPython   = "3.12"       # version de Python pour l'environnement conda
+    [string]$CondaPython   = "3.13"       # version de Python pour l'environnement conda
 )
 
-$ErrorActionPreference = "Stop"
-$Venv   = Join-Path $InstallDir "venv"
+#$ErrorActionPreference = "Stop"
+$Venv   = Join-Path $InstallDir "PMD-inst"
 $VenvPy = Join-Path $Venv "Scripts\python.exe"   # venv
 $EnvPy  = Join-Path $Venv "python.exe"           # environnement conda (python.exe à la racine)
 

@@ -7,7 +7,7 @@ Guidance for working on this repository.
 Installer scripts for [PyMoDAQ](https://pymodaq.cnrs.fr/) (a Python/Qt data-acquisition app). Each script:
 
 1. creates an isolated Python environment in `<InstallDir>/venv` (default `~/PyMoDAQ`),
-2. `pip install pymodaq`, then `pip install pyside6`,
+2. `pip install --upgrade "pymodaq[pyside6]"` (latest pymodaq + PySide6), then prints the installed version,
 3. creates a desktop + app-menu shortcut that runs the environment's `pymodaq` executable directly (no activation).
 
 | File | Role |
@@ -23,10 +23,12 @@ There is no build, no package, no test suite.
 
 - **Environment choice order**: reuse an existing env in `<InstallDir>/venv` → **conda if found** → venv with Python ≥ 3.10 (and `venv`/`ensurepip` importable) → fail with an explanatory message.
   - Opt-out of conda: `-NoConda` (Windows) / `PYMODAQ_NO_CONDA=1` (Linux).
-  - Conda Python version: `-CondaPython` / `PYMODAQ_CONDA_PYTHON` (default `3.12`).
+  - Conda Python version: `-CondaPython` / `PYMODAQ_CONDA_PYTHON` (default `3.14`). Note: PyMoDAQ's classifiers only go up to 3.13 (`requires-python = ">=3.10"`), so 3.14 is allowed but not officially listed; 3.13 is the fallback advice in the README.
 - **Conda envs are created by prefix** (`conda create -y -p <InstallDir>/venv ...`), not by name, and always with `-c conda-forge --override-channels` (avoids the Anaconda `defaults` channel ToS prompt). Packages are then installed with the env's `pip`, never `conda install`.
 - **Conda detection** checks `CONDA_EXE`, then `PATH`, then usual install dirs (`miniforge3`, `miniconda3`, `anaconda3`, `mambaforge` under the user profile / `%LOCALAPPDATA%` / `%ProgramData%` on Windows, `$HOME` / `/opt` on Linux). Conda is often not on `PATH` on Windows.
 - **Install `pymodaq` directly** from PyPI. Do not reintroduce a `requirements.txt` lookup.
+- **Always `--upgrade`.** Without it, re-running on a reused env leaves the old pymodaq in place ("Requirement already satisfied") — this is why users got stuck on 5.3.7 after 5.3.8+ came out.
+- **Install PySide6 through the extra** (`pymodaq[pyside6]`), not a bare `pip install pyside6`: the extra carries PyMoDAQ's own exclusions (e.g. `pyside6!=6.12.0`, which aborts on `Signal(bool).emit(True)`).
 - **Icon**: use `icon.ico` at the root of the installed `pymodaq` package — no searching. If it is missing, warn and fall back to a default icon; never fail on it.
   - Windows: `<venv>\Lib\site-packages\pymodaq\icon.ico`
   - Linux: ask the env's Python for `sysconfig.get_paths()["purelib"]` (path contains `pythonX.Y`), then `/pymodaq/icon.ico`.
