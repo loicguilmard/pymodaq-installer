@@ -18,7 +18,7 @@ INSTALL_DIR="${1:-$HOME/PyMoDAQ}"
 CMD="${PYMODAQ_CMD:-pymodaq}"
 NO_CONDA="${PYMODAQ_NO_CONDA:-0}"        # 1 = ignorer conda et utiliser un venv
 CONDA_PYTHON="${PYMODAQ_CONDA_PYTHON:-3.14}"
-VENV="$INSTALL_DIR/venv"
+VENV="$INSTALL_DIR/PmD-auto-install"
 VPY="$VENV/bin/python"
 
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }

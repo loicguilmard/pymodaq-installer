@@ -17,7 +17,7 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
-$Venv   = Join-Path $InstallDir "venv"
+$Venv   = Join-Path $InstallDir "PmD-auto-install"
 $VenvPy = Join-Path $Venv "Scripts\python.exe"   # venv
 $EnvPy  = Join-Path $Venv "python.exe"           # environnement conda (python.exe à la racine)
 
