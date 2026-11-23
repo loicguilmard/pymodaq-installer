@@ -1,126 +1,126 @@
-# Installateur PyMoDAQ
+# PyMoDAQ Installer
 
-Scripts d'installation automatique de [PyMoDAQ](https://pymodaq.cnrs.fr/) pour Windows et Linux.
+Automatic installation scripts for [PyMoDAQ](https://pymodaq.cnrs.fr/) on Windows and Linux.
 
-En une commande, ils :
+With a single command, they:
 
-1. créent un environnement Python isolé (**conda** s'il est installé, sinon **venv**) ;
-2. installent (ou mettent à jour) la dernière version de `pymodaq` avec le backend Qt PySide6 (`pymodaq[pyside6]`) ;
-3. créent une icône **PyMoDAQ** sur le Bureau et dans le menu des applications, qui lance PyMoDAQ dans cet environnement, sans activation manuelle.
+1. create an isolated Python environment (**conda** if it is installed, otherwise **venv**);
+2. install (or update) the latest version of `pymodaq` with the PySide6 Qt backend (`pymodaq\[pyside6]`);
+3. create a **PyMoDAQ** icon on the Desktop and in the applications menu, which launches PyMoDAQ in this environment, with no manual activation.
 
-## Contenu
+## Contents
 
-| Fichier               | Rôle                                                                   |
-|-----------------------|------------------------------------------------------------------------|
-| `install_pymodaq.bat` | Point d'entrée Windows (double-clic) : lance le script PowerShell.     |
-| `install_pymodaq.ps1` | Script d'installation Windows.                                         |
-| `install_pymodaq.sh`  | Script d'installation Linux.                                           |
+|File|Role|
+|-|-|
+|`install_pymodaq.exe`|Installer built from the ps1 file.|
+|`install_pymodaq.bat`|Windows entry point (double-click): runs the PowerShell script.|
+|`install_pymodaq.ps1`|Windows installation script.|
+|`install_pymodaq.sh`|Linux installation script.|
 
-## Prérequis
+## Requirements
 
-L'un des deux suffit :
+Either:
 
-- **conda** (Miniforge, Miniconda ou Anaconda), utilisé en priorité
-- **Python ≥ 3.10** avec le module `venv`
-  - Windows : [python.org](https://www.python.org/downloads/), en cochant *Add python.exe to PATH*
-  - Debian/Ubuntu : `sudo apt install python3 python3-venv`
+* **conda** (Miniforge, Miniconda or Anaconda), prefered
+* **Python ≥ 3.10** with the `venv` module
 
-Une connexion Internet est nécessaire pour télécharger les paquets.
+  * Windows: either with the [Python install manager](https://apps.microsoft.com/detail/9nq7512cxl7t) from the Microsoft Store or from the command line with `winget install Python.Python.3.13`
+  * Debian/Ubuntu: `sudo apt install python3 python3-venv`
+
+An Internet connection is required to download the packages.
 
 ## Installation
 
 ### Windows
 
-Gardez `install_pymodaq.bat` et `install_pymodaq.ps1` dans le même dossier, puis double-cliquez sur **`install_pymodaq.bat`**.
-
-Ou depuis une console :
-
-```bat
-install_pymodaq.bat [options]
-```
+Use the latest release of install_pymodaq.exe.
 
 ### Linux
 
 ```bash
-bash install_pymodaq.sh [dossier_d_installation]
+bash install_pymodaq.sh [install_directory]
 ```
 
-Le script crée aussi le dossier de configuration système `/etc/.pymodaq` recommandé par PyMoDAQ : le mot de passe `sudo` peut être demandé.
+The script also creates the system configuration folder `/etc/.pymodaq` recommended by PyMoDAQ: you may be asked for your `sudo` password.
 
-## Fonctionnement
+## How it works
 
-### Choix de l'environnement
+### Choice of environment
 
-1. Si l'environnement existe déjà dans le dossier d'installation, il est **réutilisé**, et PyMoDAQ y est mis à jour (`pip install --upgrade`).
-2. Sinon, si **conda** est trouvé, un **environnement conda** est créé (Python 3.14, canal `conda-forge`).
-3. Sinon, si **Python ≥ 3.10** avec `venv` est disponible, un **venv** est créé.
-4. Sinon, le script s'arrête en indiquant quoi installer.
+1. If the environment already exists in the install directory, it is **reused**, and PyMoDAQ is updated in it (`pip install --upgrade`).
+2. Otherwise, if **conda** is found, a **conda environment** is created (Python 3.14, `conda-forge` channel).
+3. Otherwise, if **Python ≥ 3.10** with `venv` is available, a **venv** is created.
+4. Otherwise, the script stops and tells you what to install.
 
-Conda est recherché dans la variable `CONDA_EXE`, le `PATH`, puis les emplacements habituels (`miniforge3`, `miniconda3`, `anaconda3`, `mambaforge` dans le dossier utilisateur, `%LOCALAPPDATA%`, `%ProgramData%` ou `/opt`). Il n'a donc pas besoin d'être dans le `PATH`.
+Conda is looked up in the `CONDA_EXE` variable, the `PATH`, then the usual locations (`miniforge3`, `miniconda3`, `anaconda3`, `mambaforge` in the user folder, `%LOCALAPPDATA%`, `%ProgramData%` or `/opt`). It therefore does not need to be on the `PATH`.
 
-### Emplacements
+### Locations
 
-Par défaut, tout est installé dans `~/PyMoDAQ` (`%USERPROFILE%\PyMoDAQ` sous Windows) :
+By default, everything is installed in `~/PyMoDAQ` (`%USERPROFILE%\PyMoDAQ` on Windows):
 
 ```
 PyMoDAQ/
-└── venv/          environnement Python (venv ou conda)
+└── venv/          Python environment (venv or conda)
 ```
 
-Raccourcis créés :
+Shortcuts created:
 
-| Système | Bureau                  | Menu                                              |
-|---------|-------------------------|---------------------------------------------------|
-| Windows | `PyMoDAQ.lnk`           | Menu Démarrer → `PyMoDAQ`                         |
-| Linux   | `PyMoDAQ.desktop`       | `~/.local/share/applications/pymodaq.desktop`     |
+|System|Desktop|Menu|
+|-|-|-|
+|Windows|`PyMoDAQ.lnk`|Start menu → `PyMoDAQ`|
+|Linux|`PyMoDAQ.desktop`|`~/.local/share/applications/pymodaq.desktop`|
 
-L'icône utilisée est `icon.ico` à la racine du paquet `pymodaq` installé dans l'environnement.
+The icon used is `icon.ico` at the root of the `pymodaq` package installed in the environment.
 
 ## Options
 
 ### Windows
 
-| Option                  | Défaut                 | Description                                              |
-|-------------------------|------------------------|----------------------------------------------------------|
-| `-InstallDir <chemin>`  | `%USERPROFILE%\PyMoDAQ`| Dossier d'installation.                                  |
-| `-Command <nom>`        | `pymodaq`              | Commande lancée par l'icône (`pymodaq` ou `dashboard`).  |
-| `-NoConda`              | —                      | Ignorer conda et créer un venv avec Python.              |
-| `-CondaPython <ver>`    | `3.14`                 | Version de Python de l'environnement conda.              |
+|Option|Default|Description|
+|-|-|-|
+|`-InstallDir <path>`|`%USERPROFILE%\PyMoDAQ`|Install directory.|
+|`-Command <name>`|`pymodaq`|Command launched by the icon (`pymodaq` or `dashboard`).|
+|`-NoConda`|—|Ignore conda and create a venv with Python.|
+|`-CondaPython <ver>`|`3.14`|Python version of the conda environment.|
 
-Exemple :
+Example:
 
 ```bat
 install_pymodaq.bat -InstallDir D:\PyMoDAQ -Command dashboard
 ```
-#### créer l'executable d'installation
 
-Dans le projet github :  https://github.com/Hope-IT-Works/PS2EXE-GUI
-La commande suivante permet de créer l'executable à partir du script ps1.
+#### Building the installer executable
+
+From the GitHub project https://github.com/Hope-IT-Works/PS2EXE-GUI (git clone)
+Copy install_pymodaq.ps1 and icon.ico in the src folder.
+
+The following command builds the executable from the ps1 script:
+
 ```powershell
  powershell -NoProfile -ExecutionPolicy Bypass -File .\ps2exe.ps1 -inputFile .\install_pymodaq.ps1 -iconFile .\icon.ico -title "PyMoDAQ installer" -description "exe creating a virtual env, installing pymodaq and making a shortcut available" -company "CNRS" -product "PyMoDAQ"
 ```
 
-### Linux (not tested)
+### Linux
 
-Le dossier d'installation se passe en premier argument ; les autres réglages par variables d'environnement :
+The install directory is passed as the first argument; the other settings are set with environment variables:
 
-| Variable               | Défaut    | Description                                              |
-|------------------------|-----------|----------------------------------------------------------|
-| `PYMODAQ_CMD`          | `pymodaq` | Commande lancée par l'icône (`pymodaq` ou `dashboard`).  |
-| `PYMODAQ_NO_CONDA`     | `0`       | `1` pour ignorer conda et créer un venv avec Python.     |
-| `PYMODAQ_CONDA_PYTHON` | `3.14`    | Version de Python de l'environnement conda.              |
+|Variable|Default|Description|
+|-|-|-|
+|`PYMODAQ_CMD`|`pymodaq`|Command launched by the icon (`pymodaq` or `dashboard`).|
+|`PYMODAQ_NO_CONDA`|`0`|`1` to ignore conda and create a venv with Python.|
+|`PYMODAQ_CONDA_PYTHON`|`3.14`|Python version of the conda environment.|
 
-Exemple :
+Example:
 
 ```bash
 PYMODAQ_NO_CONDA=1 PYMODAQ_CMD=dashboard bash install_pymodaq.sh /opt/pymodaq
 ```
 
-> `pymodaq` ouvre le **Launcher** (recommandé depuis PyMoDAQ 5.2), d'où l'on accède au Dashboard et aux autres modules. `dashboard` ouvre directement le Dashboard.
+> `pymodaq` opens the **Launcher** (recommended since PyMoDAQ 5.2), from which you can reach the Dashboard and the other modules. `dashboard` opens the Dashboard directly.
 
-## Utilisation sans l'icône
+## Using it without the icon
 
-Les modules peuvent aussi être lancés depuis l'environnement :
+The modules can also be launched from the environment:
 
 ```bash
 # Linux
@@ -134,27 +134,28 @@ Les modules peuvent aussi être lancés depuis l'environnement :
 %USERPROFILE%\PyMoDAQ\venv\Scripts\python.exe -m pymodaq.dashboard
 ```
 
-Les plugins d'instruments s'installent avec le gestionnaire de plugins (`python -m pymodaq_plugin_manager.manager`) ou avec `pip` dans le même environnement.
+Instrument plugins are installed with the plugin manager (`python -m pymodaq_plugin_manager.manager`) or with `pip` in the same environment.
 
-## Mise à jour et désinstallation
+## Updating and uninstalling
 
-- **Mettre à jour** : relancer le script ; l'environnement existant est réutilisé et `pymodaq` / PySide6 sont mis à jour vers la dernière version. La version installée est affichée en fin d'installation.
-- **Désinstaller** : supprimer le dossier d'installation et les raccourcis listés ci-dessus. Les fichiers de configuration de PyMoDAQ se trouvent dans `~/.pymodaq` (et `/etc/.pymodaq` sous Linux).
+* **Update**: run the script again; the existing environment is reused and `pymodaq` / PySide6 are updated to the latest version. The installed version is shown at the end of the installation.
+* **Uninstall**: delete the install directory and the shortcuts listed above. PyMoDAQ's configuration files are in `~/.pymodaq` (and `/etc/.pymodaq` on Linux).
 
-## Dépannage
+## Troubleshooting
 
-| Problème | Solution |
-|----------|----------|
-| *Ni conda ni Python >= 3.10 n'ont été trouvés* | Installer Miniforge, ou Python ≥ 3.10 (avec `venv`). |
-| Windows : le script PowerShell est bloqué | Lancer via `install_pymodaq.bat`, qui contourne la politique d'exécution pour ce script uniquement. |
-| Windows : `python` ouvre le Microsoft Store | Installer Python depuis python.org, ou désactiver l'alias dans *Paramètres → Applications → Alias d'exécution*. |
-| Linux : Python présent mais non retenu (sans conda) | Le module `venv` manque : `sudo apt install python3-venv`. |
-| Linux : l'icône du Bureau ne se lance pas | Clic droit → *Autoriser l'exécution*, ou utiliser l'entrée du menu des applications. |
-| Une version de PyMoDAQ ou de ses dépendances refuse de s'installer avec Python 3.14 | PyMoDAQ déclare officiellement Python 3.10 à 3.13 : supprimer le dossier `venv` et relancer avec `-CondaPython 3.13` / `PYMODAQ_CONDA_PYTHON=3.13`. |
-| L'icône par défaut s'affiche | `icon.ico` n'a pas été trouvé dans le paquet `pymodaq` ; le raccourci fonctionne quand même. |
+|Problem|Solution|
+|-|-|
+|*Neither conda nor Python >= 3.10 was found*|Install Miniforge, or Python ≥ 3.10 (with `venv`).|
+|Windows: the PowerShell script is blocked|Run it through `install_pymodaq.bat`, which bypasses the execution policy for this script only.|
+|Windows: `python` opens the Microsoft Store|Install Python with the Python install manager from the Microsoft Store or `winget install Python.Python.3.13` (see *Requirements*), or disable the alias in *Settings → Apps → App execution aliases*.|
+|Linux: Python is present but not used (no conda)|The `venv` module is missing: `sudo apt install python3-venv`.|
+|Linux: the Desktop icon does not launch|Right-click → *Allow Launching*, or use the entry in the applications menu.|
+|A version of PyMoDAQ or one of its dependencies fails to install with Python 3.14|PyMoDAQ officially supports Python 3.10 to 3.13: delete the `venv` folder and run again with `-CondaPython 3.13` / `PYMODAQ\_CONDA\_PYTHON=3.13`.|
+|The default icon is shown|`icon.ico` was not found in the `pymodaq` package; the shortcut still works.|
 
-## Liens
+## Links
 
-- Documentation PyMoDAQ : <https://pymodaq.cnrs.fr/>
-- Conseils d'installation : <https://pymodaq.cnrs.fr/en/dev/user_folder/installation_tips.html>
-- Code source : <https://github.com/PyMoDAQ>
+* PyMoDAQ documentation: [https://pymodaq.cnrs.fr/](https://pymodaq.cnrs.fr/)
+* Installation tips: [https://pymodaq.cnrs.fr/en/dev/user_folder/installation_tips.html](https://pymodaq.cnrs.fr/en/dev/user_folder/installation_tips.html)
+* Source code: [https://github.com/PyMoDAQ](https://github.com/PyMoDAQ)
+
