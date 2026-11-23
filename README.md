@@ -1,4 +1,5 @@
 # PyMoDAQ Installer
+[![Latest release](https://img.shields.io/github/v/release/loicguilmard/pymodaq-installer)](https://github.com/loicguilmard/pymodaq-installer/releases/latest)
 
 Automatic installation scripts for [PyMoDAQ](https://pymodaq.cnrs.fr/) on Windows and Linux.
 
@@ -12,7 +13,7 @@ With a single command, they:
 
 |File|Role|
 |-|-|
-|`install_pymodaq.exe`|Installer built from the ps1 file.|
+|[`install_pymodaq.exe`](https://github.com/loicguilmard/pymodaq-installer/releases/latest/download/install_pymodaq.exe)|Installer built from the ps1 file.|
 |`install_pymodaq.bat`|Windows entry point (double-click): runs the PowerShell script.|
 |`install_pymodaq.ps1`|Windows installation script.|
 |`install_pymodaq.sh`|Linux installation script.|
@@ -21,7 +22,7 @@ With a single command, they:
 
 Either:
 
-* **conda** (Miniforge, Miniconda or Anaconda), prefered
+* [**conda**](https://conda-forge.org/download/) (Miniforge, Miniconda or Anaconda), *prefered*
 * **Python ≥ 3.10** with the `venv` module
 
   * Windows: either with the [Python install manager](https://apps.microsoft.com/detail/9nq7512cxl7t) from the Microsoft Store or from the command line with `winget install Python.Python.3.13`
@@ -33,7 +34,7 @@ An Internet connection is required to download the packages.
 
 ### Windows
 
-Use the latest release of install_pymodaq.exe.
+Execute [install_pymodaq.exe](https://github.com/loicguilmard/pymodaq-installer/releases/latest/download/install_pymodaq.exe).
 
 ### Linux
 
