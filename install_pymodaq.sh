@@ -43,6 +43,18 @@ find_conda() {
   done
 }
 
+# Désactive l'avertissement « A newer version of conda exists » s'il est actif
+# (réglage utilisateur enregistré dans ~/.condarc). Non bloquant.
+disable_conda_update_notice() {
+  local conda="$1" cfg
+  cfg="$("$conda" config --show notify_outdated_conda 2>/dev/null || true)"
+  if printf '%s\n' "$cfg" | grep -qi 'notify_outdated_conda:[[:space:]]*true'; then
+    echo "Désactivation de l'avertissement de mise à jour de conda (notify_outdated_conda = false)."
+    "$conda" config --set notify_outdated_conda false \
+      || echo "Impossible de modifier notify_outdated_conda."
+  fi
+}
+
 # --- 1. Environnement : conda, sinon venv -----------------------------
 step "Recherche de conda / Python"
 mkdir -p "$INSTALL_DIR"
@@ -54,6 +66,7 @@ else
   [ "$NO_CONDA" = 1 ] || CONDA="$(find_conda || true)"
   if [ -n "$CONDA" ]; then
     step "Conda trouvé ($CONDA) : création de l'environnement conda (Python $CONDA_PYTHON) dans $VENV"
+    disable_conda_update_notice "$CONDA"
     "$CONDA" create -y -p "$VENV" "python=$CONDA_PYTHON" pip -c conda-forge --override-channels
   else
     PY="$(find_python || true)"
@@ -67,13 +80,21 @@ else
   fi
 fi
 
-"$VPY" -m pip install --upgrade pip wheel setuptools
+# --- Activation de l'environnement (pour ce processus uniquement) -------
+# Équivalent de "activate" (venv ou conda) : bin/ de l'environnement en tête du PATH.
+step "Activation de l'environnement $VENV"
+export PATH="$VENV/bin:$PATH"
+if [ -d "$VENV/conda-meta" ]; then export CONDA_PREFIX="$VENV"; else export VIRTUAL_ENV="$VENV"; fi
+
+# --no-warn-script-location : évite les avertissements « not on PATH » pour les exécutables du venv
+"$VPY" -m pip install --upgrade --no-warn-script-location pip wheel setuptools \
+  || echo "Échec de la mise à jour de pip : l'installation continue avec la version actuelle."
 
 # --- 2. PyMoDAQ + PySide6 -------------------------------------------
 # --upgrade : sur un environnement réutilisé, met pymodaq à jour au lieu de garder l'ancienne version.
 # Extra [pyside6] : installe PySide6 avec les exclusions de version définies par PyMoDAQ.
 step "Installation de pymodaq et PySide6"
-"$VPY" -m pip install --upgrade "pymodaq[pyside6]"
+"$VPY" -m pip install --upgrade --no-warn-script-location "pymodaq[pyside6]"
 echo "pymodaq $("$VPY" -c "import importlib.metadata as m; print(m.version('pymodaq'))") installé."
 
 EXE="$VENV/bin/$CMD"

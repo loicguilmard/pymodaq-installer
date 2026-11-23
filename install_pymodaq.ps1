@@ -117,8 +117,29 @@ else {
     $Py = $VenvPy
 }
 
+# --- Activation de l'environnement (pour ce processus uniquement) -------
+# Équivalent de "activate" : les dossiers de l'environnement passent en tête du PATH,
+# ce qui évite les erreurs « script ... is not on PATH » de pip.
+# Fait à la main plutôt qu'avec Activate.ps1 : marche pour venv et conda,
+# sans dépendre de la politique d'exécution PowerShell.
+Step "Activation de l'environnement $Venv"
+if ($Py -eq $EnvPy) {
+    # Environnement conda : mêmes dossiers que "conda activate"
+    $envPaths = @($Venv,
+                  (Join-Path $Venv "Library\mingw-w64\bin"),
+                  (Join-Path $Venv "Library\usr\bin"),
+                  (Join-Path $Venv "Library\bin"),
+                  (Join-Path $Venv "Scripts"),
+                  (Join-Path $Venv "bin"))
+    $env:CONDA_PREFIX = $Venv
+} else {
+    $envPaths = @(Join-Path $Venv "Scripts")
+    $env:VIRTUAL_ENV = $Venv
+}
+$env:PATH = ($envPaths -join ";") + ";" + $env:PATH
+
 # --no-warn-script-location : évite les avertissements « not on PATH » pour les exécutables du venv
-& $Py -m pip install --upgrade --no-warn-script-location wheel setuptools
+& $Py -m pip install --upgrade --no-warn-script-location pip wheel setuptools
 if ($LASTEXITCODE -ne 0) { Write-Warning "Échec de la mise à jour de pip : l'installation continue avec la version actuelle." }
 
 # --- 2. PyMoDAQ + PySide6 ---------------------------------------------
