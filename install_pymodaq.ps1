@@ -68,6 +68,21 @@ function Find-Conda {
     return $null
 }
 
+# Désactive l'avertissement « A newer version of conda exists » s'il est actif
+
+function Disable-CondaUpdateNotice($conda) {
+    try {
+        $cfg = (& $conda config --show notify_outdated_conda) -join "`n"
+        if ($cfg -match 'notify_outdated_conda:\s*True') {
+            Write-Host "Désactivation de l'avertissement de mise à jour de conda (notify_outdated_conda = false)."
+            & $conda config --set notify_outdated_conda false
+            if ($LASTEXITCODE -ne 0) { Write-Warning "Impossible de modifier notify_outdated_conda." }
+        }
+    } catch {
+        Write-Warning "Impossible de lire la configuration de conda : $($_.Exception.Message)"
+    }
+}
+
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
 # --- 1. Choix de l'environnement : conda, sinon venv ------------------
@@ -84,6 +99,7 @@ elseif (Test-Path $VenvPy) {
 }
 elseif ($CondaExe) {
     Step "Conda trouvé ($CondaExe) : création de l'environnement conda (Python $CondaPython) dans $Venv"
+    Disable-CondaUpdateNotice $CondaExe
     & $CondaExe create -y -p $Venv "python=$CondaPython" pip -c conda-forge --override-channels
     if ($LASTEXITCODE -ne 0) { throw "Échec de la création de l'environnement conda." }
     $Py = $EnvPy
@@ -101,13 +117,14 @@ else {
     $Py = $VenvPy
 }
 
-& $Py -m pip install --upgrade pip wheel setuptools
+# --no-warn-script-location : évite les avertissements « not on PATH » pour les exécutables du venv
+& $Py -m pip install --upgrade --no-warn-script-location pip wheel setuptools
 if ($LASTEXITCODE -ne 0) { throw "Échec de la mise à jour de pip." }
 
 # --- 2. PyMoDAQ + PySide6 ---------------------------------------------
 
 Step "Installation de pymodaq et PySide6"
-& $Py -m pip install --upgrade "pymodaq[pyside6]"
+& $Py -m pip install --upgrade --no-warn-script-location "pymodaq[pyside6]"
 if ($LASTEXITCODE -ne 0) { throw "Échec de l'installation de pymodaq / PySide6." }
 $PmdVer = & $Py -c "import importlib.metadata as m; print(m.version('pymodaq'))"
 Write-Host "pymodaq $PmdVer installé."
