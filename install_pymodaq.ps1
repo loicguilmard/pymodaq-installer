@@ -16,14 +16,14 @@ param(
     [string]$CondaPython   = "3.14"       # version de Python pour l'environnement conda
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $Venv   = Join-Path $InstallDir "venv"
 $VenvPy = Join-Path $Venv "Scripts\python.exe"   # venv
 $EnvPy  = Join-Path $Venv "python.exe"           # environnement conda (python.exe à la racine)
 
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
 
-# Ajout d'une pause si c'est un exe 
+# Ajout d'une pause si c'est un exe
 $IsExe = [Diagnostics.Process]::GetCurrentProcess().ProcessName -notin @("powershell", "pwsh")
 function Wait-Close {
     if ($IsExe) { Write-Host ""; Read-Host "Appuyez sur Entrée pour fermer cette fenêtre" | Out-Null }
@@ -83,7 +83,7 @@ function Disable-CondaUpdateNotice($conda) {
     }
 }
 
-New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+New-Item -ItemType Directory -Force -Path $InstallDir -ErrorAction Stop | Out-Null
 
 # --- 1. Choix de l'environnement : conda, sinon venv ------------------
 Step "Recherche de conda / Python"
@@ -118,8 +118,8 @@ else {
 }
 
 # --no-warn-script-location : évite les avertissements « not on PATH » pour les exécutables du venv
-& $Py -m pip install --upgrade --no-warn-script-location pip wheel setuptools
-if ($LASTEXITCODE -ne 0) { throw "Échec de la mise à jour de pip." }
+& $Py -m pip install --upgrade --no-warn-script-location wheel setuptools
+if ($LASTEXITCODE -ne 0) { Write-Warning "Échec de la mise à jour de pip : l'installation continue avec la version actuelle." }
 
 # --- 2. PyMoDAQ + PySide6 ---------------------------------------------
 
@@ -148,13 +148,17 @@ $targets = @(
     (Join-Path ([Environment]::GetFolderPath("Programs")) "PyMoDAQ.lnk")
 )
 foreach ($lnkPath in $targets) {
-    $lnk = $Shell.CreateShortcut($lnkPath)
-    $lnk.TargetPath       = $Exe
-    $lnk.WorkingDirectory = $InstallDir
-    $lnk.Description      = "Lancer PyMoDAQ"
-    if ($Icon) { $lnk.IconLocation = "$Icon,0" }
-    $lnk.Save()
-    Write-Host "  $lnkPath"
+    try {
+        $lnk = $Shell.CreateShortcut($lnkPath)
+        $lnk.TargetPath       = $Exe
+        $lnk.WorkingDirectory = $InstallDir
+        $lnk.Description      = "Lancer PyMoDAQ"
+        if ($Icon) { $lnk.IconLocation = "$Icon,0" }
+        $lnk.Save()
+        Write-Host "  $lnkPath"
+    } catch {
+        Write-Warning "Raccourci non créé ($lnkPath) : $($_.Exception.Message)"
+    }
 }
 
 Write-Host "`nInstallation terminée. Lancez PyMoDAQ depuis l'icône du Bureau." -ForegroundColor Green
