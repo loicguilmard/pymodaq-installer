@@ -2,11 +2,10 @@
 #  Installation de PyMoDAQ (Windows)
 #  - crée un environnement : conda si conda est installé,
 #    sinon un venv avec Python >= 3.10
-#  - installe pymodaq
-#  - installe PySide6
+#  - installe ou met à jour pymodaq et PySide6 (pymodaq[pyside6])
 #  - crée un raccourci "PyMoDAQ" sur le Bureau et dans le menu Démarrer
 #
-#  Usage :  double-cliquer sur install_pymodaq.bat
+#  Usage :  double-cliquer sur install_pymodaq.exe (généré par PS2EXE) ou install_pymodaq.bat
 #      ou   powershell -ExecutionPolicy Bypass -File install_pymodaq.ps1 [-InstallDir C:\chemin] [-NoConda]
 #           -NoConda : ignore conda et utilise un venv avec Python
 # =====================================================================
@@ -14,15 +13,29 @@ param(
     [string]$InstallDir    = (Join-Path $env:USERPROFILE "PyMoDAQ"),
     [string]$Command       = "pymodaq",   # "pymodaq" = Launcher (>= 5.2), ou "dashboard"
     [switch]$NoConda,                     # ignore conda, utilise un venv
-    [string]$CondaPython   = "3.13"       # version de Python pour l'environnement conda
+    [string]$CondaPython   = "3.14"       # version de Python pour l'environnement conda
 )
 
-#$ErrorActionPreference = "Stop"
-$Venv   = Join-Path $InstallDir "PMD-inst"
+$ErrorActionPreference = "Stop"
+$Venv   = Join-Path $InstallDir "venv"
 $VenvPy = Join-Path $Venv "Scripts\python.exe"   # venv
 $EnvPy  = Join-Path $Venv "python.exe"           # environnement conda (python.exe à la racine)
 
 function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
+
+# Ajout d'une pause si c'est un exe 
+$IsExe = [Diagnostics.Process]::GetCurrentProcess().ProcessName -notin @("powershell", "pwsh")
+function Wait-Close {
+    if ($IsExe) { Write-Host ""; Read-Host "Appuyez sur Entrée pour fermer cette fenêtre" | Out-Null }
+}
+
+# Toute erreur non gérée : message lisible, pause, puis sortie en échec
+trap {
+    Write-Host "`nL'installation a échoué :" -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    Wait-Close
+    exit 1
+}
 
 # Renvoie la commande Python (tableau) si une version >= 3.10 avec venv est disponible, sinon $null
 function Find-Python {
@@ -92,13 +105,12 @@ else {
 if ($LASTEXITCODE -ne 0) { throw "Échec de la mise à jour de pip." }
 
 # --- 2. PyMoDAQ + PySide6 ---------------------------------------------
-Step "Installation de pymodaq"
-& $Py -m pip install pymodaq
-if ($LASTEXITCODE -ne 0) { throw "Échec de l'installation de pymodaq." }
 
-Step "Installation de PySide6"
-& $Py -m pip install pyside6
-if ($LASTEXITCODE -ne 0) { throw "Échec de l'installation de PySide6." }
+Step "Installation de pymodaq et PySide6"
+& $Py -m pip install --upgrade "pymodaq[pyside6]"
+if ($LASTEXITCODE -ne 0) { throw "Échec de l'installation de pymodaq / PySide6." }
+$PmdVer = & $Py -c "import importlib.metadata as m; print(m.version('pymodaq'))"
+Write-Host "pymodaq $PmdVer installé."
 
 # Avec venv comme avec conda, les exécutables pip sont dans Scripts\
 $Exe = Join-Path $Venv "Scripts\$Command.exe"
@@ -129,3 +141,4 @@ foreach ($lnkPath in $targets) {
 }
 
 Write-Host "`nInstallation terminée. Lancez PyMoDAQ depuis l'icône du Bureau." -ForegroundColor Green
+Wait-Close
