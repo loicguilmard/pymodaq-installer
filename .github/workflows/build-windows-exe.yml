@@ -1,0 +1,109 @@
+# Construit install_pymodaq.exe à partir de install_pymodaq.ps1 (PS2EXE)
+# quand un tag de version est poussé, puis l'ajoute à la release GitHub du tag.
+#
+# Tags acceptés : 1.2.3 ou v1.2.3
+#   git tag v1.2.3 && git push origin v1.2.3
+
+name: Build Windows installer
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:          # lancement manuel (construit l'exe sans publier de release)
+
+permissions:
+  contents: write             # nécessaire pour créer la release et y déposer l'exe
+
+env:
+  # Commit de Hope-IT-Works/PS2EXE-GUI utilisé (figé pour des builds reproductibles)
+  PS2EXE_GUI_REF: b0d9cdd50dd4e0f302ae35c6ce81031b3033a874
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell     # Windows PowerShell 5.1, requis par ps2exe.ps1
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Récupérer PS2EXE-GUI
+        uses: actions/checkout@v4
+        with:
+          repository: Hope-IT-Works/PS2EXE-GUI
+          ref: ${{ env.PS2EXE_GUI_REF }}
+          path: _ps2exe
+
+      - name: Déterminer la version
+        id: version
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+              $tag = "${{ github.ref_name }}"
+          } else {
+              $tag = "0.0.0"
+          }
+          $ver = $tag -replace '^v', ''
+          if ($ver -notmatch '^\d+\.\d+\.\d+$') { throw "Tag de version invalide : $tag" }
+          # Out-File -Encoding utf8 : sous Windows PowerShell 5.1, ">>" écrirait en UTF-16
+          "tag=$tag"           | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "exe_version=$ver.0" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append   # format x.x.x.x attendu par ps2exe
+          Write-Host "Version : $ver"
+
+      - name: Préparer les fichiers
+        run: |
+          New-Item -ItemType Directory -Force -Path build, dist | Out-Null
+
+          # Ré-encodage en UTF-8 avec BOM : sans BOM, Windows PowerShell 5.1 lit le script
+          # comme ANSI et les accents des messages sont corrompus dans l'exe.
+          $src = Get-Content -Raw -Encoding UTF8 install_pymodaq.ps1
+          [IO.File]::WriteAllText("$PWD\build\install_pymodaq.ps1", $src, (New-Object Text.UTF8Encoding $true))
+
+          # Icône : icon.ico du dépôt, sinon celle de PyMoDAQ
+          if (Test-Path icon.ico) {
+              Copy-Item icon.ico build\icon.ico
+          } else {
+              Write-Host "icon.ico absent du dépôt : téléchargement de l'icône PyMoDAQ"
+              Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/PyMoDAQ/PyMoDAQ/HEAD/icon.ico" -OutFile build\icon.ico
+          }
+
+      - name: Construire install_pymodaq.exe
+        run: |
+          & .\_ps2exe\src\ps2exe.ps1 `
+              -inputFile   .\build\install_pymodaq.ps1 `
+              -outputFile  .\dist\install_pymodaq.exe `
+              -iconFile    .\build\icon.ico `
+              -title       "PyMoDAQ installer" `
+              -description "exe creating a virtual env, installing pymodaq and making a shortcut available" `
+              -company     "CNRS" `
+              -product     "PyMoDAQ" `
+              -version     "${{ steps.version.outputs.exe_version }}"
+
+          if (-not (Test-Path .\dist\install_pymodaq.exe)) { throw "La génération de install_pymodaq.exe a échoué." }
+          Get-Item .\dist\install_pymodaq.exe | Format-List Name, Length, VersionInfo
+
+      - name: Conserver l'exe comme artefact du workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: install_pymodaq-${{ steps.version.outputs.tag }}
+          path: dist/install_pymodaq.exe
+
+      - name: Publier dans la release du tag
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          # Crée la release si elle n'existe pas, sinon remplace l'exe déjà présent.
+          # "Continue" : sinon le message d'erreur de "gh release view" (release absente) arrête l'étape.
+          $ErrorActionPreference = "Continue"
+          gh release view $env:TAG 2>&1 | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+              gh release upload $env:TAG dist/install_pymodaq.exe --clobber
+          } else {
+              gh release create $env:TAG dist/install_pymodaq.exe --title "PyMoDAQ installer $env:TAG" --generate-notes
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Échec de la publication de la release." }
